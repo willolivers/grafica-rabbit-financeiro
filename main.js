@@ -1,13 +1,10 @@
+
 const { app, BrowserWindow, shell, dialog } = require('electron');
 const path = require('node:path');
-const { autoUpdater } = require('electron-updater');
-
-let mainWindow;
-let updateCheckStarted = false;
-let updatePromptOpen = false;
+const { fileURLToPath } = require('node:url');
 
 function createWindow() {
-  mainWindow = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1440,
     height: 920,
     minWidth: 980,
@@ -24,136 +21,73 @@ function createWindow() {
     }
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'grafica_rabbit_financeiro.html'));
+  win.loadFile(path.join(__dirname, 'grafica_rabbit_financeiro.html'));
 
-  // Mantém o app dentro da janela; links externos abrem no navegador padrão.
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.startsWith('https://') || url.startsWith('http://')) shell.openExternal(url);
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
     return { action: 'deny' };
   });
-  mainWindow.webContents.on('will-navigate', (event, url) => {
-    const localFile = path.resolve(__dirname, 'grafica_rabbit_financeiro.html');
-    if (url.startsWith('http://') || url.startsWith('https://') || !url.startsWith('file://')) {
+
+  win.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('http://') || url.startsWith('https://')) {
       event.preventDefault();
-      if (url.startsWith('http://') || url.startsWith('https://')) shell.openExternal(url);
+      shell.openExternal(url);
       return;
     }
+
+    if (!url.startsWith('file://')) {
+      event.preventDefault();
+      return;
+    }
+
     try {
-      const target = decodeURIComponent(new URL(url).pathname);
-      if (path.resolve(target) !== localFile) event.preventDefault();
-    } catch { event.preventDefault(); }
+      const target = path.resolve(fileURLToPath(url));
+      const localFile = path.resolve(
+        path.join(__dirname, 'grafica_rabbit_financeiro.html')
+      );
+
+      if (target !== localFile) {
+        event.preventDefault();
+      }
+    } catch {
+      event.preventDefault();
+    }
   });
 
-  mainWindow.webContents.on('render-process-gone', async (_event, details) => {
-    console.error('A janela do aplicativo foi encerrada inesperadamente:', details);
-    await dialog.showMessageBox(mainWindow, {
+  win.webContents.on('render-process-gone', async (_event, details) => {
+    console.error(
+      'A janela do aplicativo foi encerrada inesperadamente:',
+      details
+    );
+
+    if (win.isDestroyed()) return;
+
+    await dialog.showMessageBox(win, {
       type: 'error',
       title: 'Gráfica Rabbit Financeiro',
       message: 'O aplicativo encontrou um problema.',
-      detail: 'Reabra o programa. Mantenha seus backups JSON em local seguro.'
+      detail:
+        'Reabra o programa. Mantenha seus backups JSON em local seguro.'
     });
   });
-
-  mainWindow.on('closed', () => { mainWindow = null; });
-}
-
-function configureAutoUpdates() {
-  // Builds de desenvolvimento não devem consultar nem instalar releases.
-  if (!app.isPackaged || updateCheckStarted) return;
-  updateCheckStarted = true;
-
-  autoUpdater.autoDownload = false;
-  // A instalação só deve acontecer após confirmação explícita do usuário.
-  autoUpdater.autoInstallOnAppQuit = false;
-  autoUpdater.allowPrerelease = false;
-
-  autoUpdater.on('error', (error) => {
-    console.error('Erro ao verificar/baixar atualização:', error);
-    // Não interrompe a abertura do sistema se o servidor estiver indisponível.
-  });
-
-  autoUpdater.on('update-available', async (info) => {
-    if (updatePromptOpen || !mainWindow) return;
-    updatePromptOpen = true;
-    try {
-      const result = await dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        buttons: ['Baixar atualização', 'Agora não'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Atualização disponível',
-        message: `A versão ${info.version} do Gráfica Rabbit Financeiro está disponível.`,
-        detail: 'Seus dados financeiros devem permanecer no computador. Por segurança, faça um backup antes de atualizar.'
-      });
-      if (result.response === 0) {
-        try {
-          await autoUpdater.downloadUpdate();
-        } catch (error) {
-          console.error('Falha ao baixar a atualização:', error);
-          if (mainWindow && !mainWindow.isDestroyed()) {
-            await dialog.showMessageBox(mainWindow, {
-              type: 'error',
-              title: 'Não foi possível baixar a atualização',
-              message: 'A atualização não pôde ser baixada.',
-              detail: 'Verifique sua conexão com a internet e tente novamente mais tarde. O aplicativo continuará funcionando normalmente.'
-            });
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Não foi possível exibir a confirmação de atualização:', error);
-    } finally {
-      updatePromptOpen = false;
-    }
-  });
-
-  autoUpdater.on('update-not-available', () => {
-    console.log('O aplicativo já está na versão mais recente.');
-  });
-
-  autoUpdater.on('download-progress', (progress) => {
-    console.log(`Download da atualização: ${Math.round(progress.percent)}%`);
-  });
-
-  autoUpdater.on('update-downloaded', async (info) => {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
-    try {
-      const result = await dialog.showMessageBox(mainWindow, {
-        type: 'info',
-        buttons: ['Reiniciar e atualizar', 'Depois'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Atualização pronta',
-        message: `A versão ${info.version} foi baixada.`,
-        detail: 'Salve qualquer informação que esteja preenchendo antes de reiniciar. Se escolher “Depois”, o aplicativo não instalará a atualização automaticamente ao fechar.'
-      });
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-      // Com autoInstallOnAppQuit=false, escolher “Depois” não instala ao fechar.
-    } catch (error) {
-      console.error('Não foi possível exibir a confirmação de instalação:', error);
-    }
-  });
-
-  // Falhas de atualização não devem impedir o uso normal do programa.
-  setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((error) => {
-      console.error('Não foi possível verificar atualizações:', error);
-    });
-  }, 5000);
 }
 
 app.whenReady().then(() => {
   app.setAppUserModelId('br.com.graficarabbit.financeiro');
+
   createWindow();
-  configureAutoUpdates();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
   });
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit();
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
 });
