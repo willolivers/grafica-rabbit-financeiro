@@ -9,7 +9,7 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win nsis",
+    "build:win": "electron-builder --win nsis --publish never",
     "build:mac": "electron-builder --mac dmg zip",
     "build:mac:arm64": "electron-builder --mac dmg zip --arm64",
     "build:mac:x64": "electron-builder --mac dmg zip --x64"
