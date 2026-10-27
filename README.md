@@ -20,7 +20,7 @@ Antes de migrar:
 
 Não apague nem substitua a versão antiga até conferir a importação. Continue
 fazendo backups regulares. Esta etapa inicial ainda não migra para SQLite e não
-inclui login, sincronização em nuvem ou atualizações automáticas.
+inclui login ou sincronização em nuvem. O fluxo de atualização automática está em configuração inicial e ainda precisa de testes reais.
 
 REQUISITOS PARA COMPILAR
 -----------------------
@@ -57,8 +57,8 @@ PRÓXIMAS ETAPAS RECOMENDADAS
 1. Testar o app e confirmar a importação de backup.
 2. Implementar armazenamento local mais robusto (por exemplo, SQLite) com migração
    testada e backup/restore antes de remover o localStorage.
-3. Adicionar ícone oficial, versão e fluxo de atualização.
-4. Testar cada instalador no sistema operacional correspondente.
+3. Adicionar ícone oficial e finalizar a estratégia de versões.
+4. Testar cada instalador e o ciclo de atualização no sistema operacional correspondente.
 5. Avaliar senha/login local e proteção adicional conforme o uso pretendido.
 
 
@@ -71,6 +71,8 @@ Como funciona:
 - O app empacotado verifica atualizações alguns segundos após abrir.
 - Se houver uma versão nova publicada como GitHub Release, pergunta se deseja baixar.
 - Após o download, pergunta se deseja reiniciar para instalar.
+- Se escolher “Depois”, a atualização não será instalada automaticamente ao fechar o app.
+- Falhas de download são registradas e apresentadas sem bloquear o uso normal.
 - O código HTML e o localStorage não foram alterados por esta configuração.
 
 IMPORTANTE — A CONFIGURAÇÃO AINDA NÃO ESTÁ PRONTA PARA DISTRIBUIÇÃO:
