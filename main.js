@@ -63,7 +63,8 @@ function configureAutoUpdates() {
   updateCheckStarted = true;
 
   autoUpdater.autoDownload = false;
-  autoUpdater.autoInstallOnAppQuit = true;
+  // A instalação só deve acontecer após confirmação explícita do usuário.
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.allowPrerelease = false;
 
   autoUpdater.on('error', (error) => {
@@ -85,8 +86,22 @@ function configureAutoUpdates() {
         detail: 'Seus dados financeiros devem permanecer no computador. Por segurança, faça um backup antes de atualizar.'
       });
       if (result.response === 0) {
-        autoUpdater.downloadUpdate();
+        try {
+          await autoUpdater.downloadUpdate();
+        } catch (error) {
+          console.error('Falha ao baixar a atualização:', error);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            await dialog.showMessageBox(mainWindow, {
+              type: 'error',
+              title: 'Não foi possível baixar a atualização',
+              message: 'A atualização não pôde ser baixada.',
+              detail: 'Verifique sua conexão com a internet e tente novamente mais tarde. O aplicativo continuará funcionando normalmente.'
+            });
+          }
+        }
       }
+    } catch (error) {
+      console.error('Não foi possível exibir a confirmação de atualização:', error);
     } finally {
       updatePromptOpen = false;
     }
@@ -101,17 +116,24 @@ function configureAutoUpdates() {
   });
 
   autoUpdater.on('update-downloaded', async (info) => {
-    if (!mainWindow) return;
-    const result = await dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      buttons: ['Reiniciar e atualizar', 'Depois'],
-      defaultId: 0,
-      cancelId: 1,
-      title: 'Atualização pronta',
-      message: `A versão ${info.version} foi baixada.`,
-      detail: 'Salve qualquer informação que esteja preenchendo antes de reiniciar.'
-    });
-    if (result.response === 0) autoUpdater.quitAndInstall();
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    try {
+      const result = await dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        buttons: ['Reiniciar e atualizar', 'Depois'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Atualização pronta',
+        message: `A versão ${info.version} foi baixada.`,
+        detail: 'Salve qualquer informação que esteja preenchendo antes de reiniciar. Se escolher “Depois”, o aplicativo não instalará a atualização automaticamente ao fechar.'
+      });
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall();
+      }
+      // Com autoInstallOnAppQuit=false, escolher “Depois” não instala ao fechar.
+    } catch (error) {
+      console.error('Não foi possível exibir a confirmação de instalação:', error);
+    }
   });
 
   // Falhas de atualização não devem impedir o uso normal do programa.
