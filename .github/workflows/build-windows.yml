@@ -1,0 +1,41 @@
+
+name: Compilar instalador Windows
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Baixar o código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Verificar sintaxe do aplicativo
+        run: node --check main.js
+
+      - name: Validar package.json
+        run: node -e "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')); console.log('package.json válido')"
+
+      - name: Compilar instalador Windows
+        run: npm run build:win
+
+      - name: Disponibilizar instalador para download
+        uses: actions/upload-artifact@v4
+        with:
+          name: Grafica-Rabbit-Financeiro-Windows
+          path: dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
