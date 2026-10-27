@@ -1,0 +1,61 @@
+{
+  "name": "grafica-rabbit-financeiro",
+  "version": "0.1.0",
+  "description": "Sistema financeiro desktop da Gráfica Rabbit",
+  "main": "main.js",
+  "author": "Gráfica Rabbit",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis",
+    "build:mac": "electron-builder --mac dmg",
+    "build:mac:arm64": "electron-builder --mac dmg --arm64",
+    "build:mac:x64": "electron-builder --mac dmg --x64"
+  },
+  "devDependencies": {
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.12",
+    "electron-updater": "^6.6.2"
+  },
+  "build": {
+    "afterPack": "./scripts/afterPack.js",
+    "appId": "br.com.graficarabbit.financeiro",
+    "productName": "Gráfica Rabbit Financeiro",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "grafica_rabbit_financeiro.html",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.business"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "willolivers",
+        "repo": "grafica-rabbit-financeiro",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
